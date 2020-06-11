@@ -20,7 +20,11 @@ def product_view(request, pk):
     template = 'app/product_detail.html'
     product = get_object_or_404(Product, id=pk)
     reviews = Review.objects.filter(product=product.id)
-    is_review_exist = False
+    reviewed_products = request.session.get('reviewed_products', '[]')
+    if product.id in reviewed_products:
+        is_review_exist = True
+    else:
+        is_review_exist = False
 
     if request.method == 'POST':
         form = ReviewForm(request.POST)
@@ -28,14 +32,12 @@ def product_view(request, pk):
             cleaned_data = form.cleaned_data
             Review.objects.create(text=cleaned_data['text'], product=product)
             is_review_exist = True
-            # попытка добавлять id продукта в request.session, чтобы затем проверять наличие отзыва
-            # от этого пользователя
-            if not request.session['reviewed_products']:
-                request.session['reviewed_products'] = [product.id]
+            if len(reviewed_products) == 0:
+                reviewed_products.append(product.id)
+                request.session['reviewed_products'] = reviewed_products
             else:
-                request.session['reviewed_products'].append(product.id)
-            # не сработала логика, перемещаясь со страницы одного продукта на страницу другого
-            # обнуляется request.session['reviewed_products']
+                reviewed_products.append(product.id)
+                request.session['reviewed_products'] = reviewed_products
 
     context = {
         'form': ReviewForm,
